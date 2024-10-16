@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket         = "bilarn-eks-ews-bucket1"
+    bucket         = "bilarn-eks-aws-bucket1"
     region         = "us-east-1"
     key            = "aws-eks-mtire-devsec-project/terraform.tfstate"
-    dynamodb_table = "Lock-Files"
+    dynamodb_table = "terraform-state-locks"
     encrypt        = true
   }
   required_version = ">=0.13.0"
