@@ -1,0 +1,8 @@
+vpc-name      = "Bilarn-vpc"
+igw-name      = "Bilarn-igw"
+subnet-name   = "Bilarn-subnet"
+rt-name       = "Bilarn-route-table"
+sg-name       = "Bilarn-sg"
+instance-name = "Bilarn-server"
+key-name      = "Ec2-Jenkins-server-keys"
+iam-role      = "Jenkins-iam-role"
