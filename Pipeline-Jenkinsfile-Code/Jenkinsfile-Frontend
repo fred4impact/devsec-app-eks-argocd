@@ -24,7 +24,7 @@ pipeline {
         }
         stage('Sonarqube Analysis') {
             steps {
-                dir('Application-Code/frontend') {
+                dir('Project-code/frontend') {
                     withSonarQubeEnv('sonar-server') {
                         sh ''' $SCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.projectName=three-tier-frontend \
@@ -42,7 +42,7 @@ pipeline {
         }
         stage('OWASP Dependency-Check Scan') {
             steps {
-                dir('Application-Code/frontend') {
+                dir('Project-code/frontend') {
                     dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
                     dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
                 }
@@ -50,7 +50,7 @@ pipeline {
         }
         stage('Trivy File Scan') {
             steps {
-                dir('Application-Code/frontend') {
+                dir('Project-code/frontend') {
                     sh 'trivy fs . > trivyfs.txt'
                 }
             }
@@ -58,7 +58,7 @@ pipeline {
         stage("Docker Image Build") {
             steps {
                 script {
-                    dir('Application-Code/frontend') {
+                    dir('Project-code/frontend') {
                             sh 'docker system prune -f'
                             sh 'docker container prune -f'
                             sh 'docker build -t ${AWS_ECR_REPO_NAME} .'
@@ -91,7 +91,7 @@ pipeline {
                 GIT_USER_NAME = "fred4impact"
             }
             steps {
-                dir('Kubernetes-Manifests-file/Frontend') {
+                dir('Kubes-Manifests-file/Frontend') {
                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             git config user.email "runtesting4me@gmail.com"

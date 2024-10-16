@@ -42,7 +42,7 @@ pipeline {
         }
         stage('OWASP Dependency-Check Scan') {
             steps {
-                dir('Application-Code/backend') {
+                dir('Project-code/backend') {
                     dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
                     dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
                 }
@@ -50,7 +50,7 @@ pipeline {
         }
         stage('Trivy File Scan') {
             steps {
-                dir('Application-Code/backend') {
+                dir('Project-code/backend') {
                     sh 'trivy fs . > trivyfs.txt'
                 }
             }
@@ -58,7 +58,7 @@ pipeline {
         stage("Docker Image Build") {
             steps {
                 script {
-                    dir('Application-Code/backend') {
+                    dir('Project-code/backend') {
                             sh 'docker system prune -f'
                             sh 'docker container prune -f'
                             sh 'docker build -t ${AWS_ECR_REPO_NAME} .'
@@ -91,7 +91,7 @@ pipeline {
                 GIT_USER_NAME = "fred4impact"
             }
             steps {
-                dir('Kubernetes-Manifests-file/Backend') {
+                dir('Kubes-Manifests-file/Backend') {
                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             git config user.email "runtesting4me@gmail.com"
