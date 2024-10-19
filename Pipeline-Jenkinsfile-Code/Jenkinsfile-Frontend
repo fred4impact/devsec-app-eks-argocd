@@ -1,7 +1,6 @@
 pipeline {
     agent any 
     tools {
-        jdk 'jdk'
         nodejs 'nodejs'
     }
     environment  {
@@ -19,16 +18,19 @@ pipeline {
         }
         stage('Checkout from Git') {
             steps {
-                git credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
+                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
             }
         }
         stage('Sonarqube Analysis') {
             steps {
                 dir('Project-code/frontend') {
                     withSonarQubeEnv('sonar-server') {
-                        sh ''' $SCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectName=three-tier-frontend \
-                        -Dsonar.projectKey=three-tier-frontend '''
+                       sh ''' $SCANNER_HOME/bin/sonar-scanner -X \
+                           -Dsonar.projectKey=three-tier-backend \
+                           -Dsonar.sources=. \
+                           -Dsonar.host.url=http://44.203.92.195:9000 \
+                           -Dsonar.login=squ_e0a50f21dc3a9b2041c90fda9213ffb457fe797a'''
+
                     }
                 }
             }
@@ -82,7 +84,7 @@ pipeline {
         }
         stage('Checkout Code') {
             steps {
-                git credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
+                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
             }
         }
         stage('Update Deployment file') {
