@@ -49,13 +49,21 @@ The project uses Jenkins for Continuous Integration, Continuous Delivery, and se
 The pipeline stages are as follows:
 
 1.  **Checkout:** The pipeline checks out the latest code from the `main` branch of the GitHub repository.
+
 2.  **Static Analysis (SAST):** Code is scanned for quality and security vulnerabilities using **SonarQube**. The pipeline waits for the SonarQube Quality Gate to pass before proceeding.
+
 3.  **Dependency Scanning (SCA):** **OWASP Dependency-Check** is used to scan the project's dependencies for known CVEs.
+
 4.  **Filesystem Vulnerability Scan:** **Trivy** scans the project's file system for vulnerabilities (`trivy fs`).
+
 5.  **Build Docker Image:** A Docker image is built for the service (frontend or backend) using its respective `Dockerfile`.
+
 6.  **Push to ECR:** The newly built Docker image is tagged and pushed to an Amazon ECR (Elastic Container Registry) repository.
-7.  **Image Vulnerability Scan:** **Trivy** is used again, this time to scan the final Docker image in ECR for OS and application-level vulnerabilities (`trivy image`).
-8.  **Update Manifest & Deploy:**
+
+7.  ** Image Vulnerability Scan:** **Trivy** is used again, this time to scan the final Docker image in ECR for OS and application-level vulnerabilities (`trivy image`).
+
+
+8.  ** Update Manifest & Deploy:**
     -   The pipeline checks out the repository again.
     -   It modifies the Kubernetes `deployment.yaml` for the corresponding service, updating the image tag to the new version (e.g., `${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}`).
     -   It commits and pushes this change directly back to the GitHub repository.

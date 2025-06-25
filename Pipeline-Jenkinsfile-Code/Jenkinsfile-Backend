@@ -18,18 +18,18 @@ pipeline {
         }
         stage('Checkout from Git') {
             steps {
-                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
+                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/devsec-app-eks-argocd.git'
             }
         }
         stage('Sonarqube Analysis') {
             steps {
                 dir('Project-code/backend') {
                     withSonarQubeEnv('sonar-server') {
-                        sh '''$SCANNER_HOME/bin/sonar-scanner \
-                              -Dsonar.projectKey=three-tier-backend \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=http://44.203.92.195:9000 \
-                              -Dsonar.login=squ_e0a50f21dc3a9b2041c90fda9213ffb457fe797a'''
+                        sh '''$SCANNER_HOME/bin/ sonar-scanner \
+                                -Dsonar.projectKey=three-tier-backend \
+                                -Dsonar.sources=. \
+                                -Dsonar.host.url=http://54.198.203.221:9000 \
+                                -Dsonar.login=squ_8494ffffe7e3b5dee20a34b8fd2402ad0ce1bd23a'''
                     }
                 }
             }
@@ -87,14 +87,14 @@ pipeline {
         }
         stage('Checkout Code') {
             steps {
-                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
+                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/devsec-app-eks-argocd.git'
             }
         }
         stage('Update Deployment file') {
             steps {
                 script {
                     def imageTag = "${BUILD_NUMBER}" // Define imageTag
-                    dir('Kubes-Manifests-file/Backend') {
+                    dir('K8s-manifests/Backend') {
                         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                             sh '''
                                 git config user.email "runtesting4me@gmail.com"
@@ -102,7 +102,7 @@ pipeline {
                                 sed -i "s/${AWS_ECR_REPO_NAME}:${imageTag}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}/" deployment.yaml
                                 git add deployment.yaml
                                 git commit -m "Update deployment Image to version ${BUILD_NUMBER}"
-                                git push https://${GITHUB_TOKEN}@github.com/fred4impact/aws-eks-mtire-devsec-project HEAD:main
+                                git push https://${GITHUB_TOKEN}@github.com/fred4impact/adevsec-app-eks-argocd HEAD:main
                             '''
                         }
                     }

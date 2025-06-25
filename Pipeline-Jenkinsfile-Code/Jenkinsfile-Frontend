@@ -18,7 +18,7 @@ pipeline {
         }
         stage('Checkout from Git') {
             steps {
-                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
+                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/devsec-app-eks-argocd.git'
             }
         }
         stage('Sonarqube Analysis') {
@@ -84,16 +84,16 @@ pipeline {
         }
         stage('Checkout Code') {
             steps {
-                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/aws-eks-mtire-devsec-project.git'
+                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/devsec-app-eks-argocd.git'
             }
         }
         stage('Update Deployment file') {
             environment {
-                GIT_REPO_NAME = "aws-eks-mtire-devsec-project"
+                GIT_REPO_NAME = "devsec-app-eks-argocd"
                 GIT_USER_NAME = "fred4impact"
             }
             steps {
-                dir('Kubes-Manifests-file/Frontend') {
+                dir('K8s-manifests/Frontend') {
                     withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             git config user.email "runtesting4me@gmail.com"
@@ -105,7 +105,7 @@ pipeline {
                             sed -i "s/${AWS_ECR_REPO_NAME}:${imageTag}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}/" deployment.yaml
                             git add deployment.yaml
                             git commit -m "Update deployment Image to version \${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:master
+                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                         '''
                     }
                 }
