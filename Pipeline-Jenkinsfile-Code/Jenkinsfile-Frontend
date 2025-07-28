@@ -26,22 +26,25 @@ pipeline {
                 dir('Project-code/frontend') {
                     withSonarQubeEnv('sonar-server') {
                        sh ''' $SCANNER_HOME/bin/sonar-scanner -X \
-                           -Dsonar.projectKey=three-tier-backend \
+                           -Dsonar.projectKey=three-tier-frontend \
                            -Dsonar.sources=. \
-                           -Dsonar.host.url=http://44.203.92.195:9000 \
-                           -Dsonar.login=squ_e0a50f21dc3a9b2041c90fda9213ffb457fe797a'''
+                           -Dsonar.host.url=http://98.83.234.205:9000 \
+                           -Dsonar.login=squ_fc8ffb94e765d3c25d315471affca7bad3c1c374'''
 
                     }
                 }
             }
         }
-        stage('Quality Check') {
-            steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token' 
-                }
-            }
-        }
+
+       stage('Quality Gate') {
+				    steps {
+				        timeout(time: 10, unit: 'MINUTES') {
+				            waitForQualityGate abortPipeline: true, credentialsId: 'sonar-token'
+				        }
+				    }
+       }
+
+    
         stage('OWASP Dependency-Check Scan') {
             steps {
                 dir('Project-code/frontend') {
@@ -64,52 +67,82 @@ pipeline {
                             sh 'docker system prune -f'
                             sh 'docker container prune -f'
                             sh 'docker build -t ${AWS_ECR_REPO_NAME} .'
+                            sh 'docker tag ${AWS_ECR_REPO_NAME} ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}'
                     }
                 }
             }
         }
-        stage("ECR Image Pushing") {
-            steps {
-                script {
-                        sh 'aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${REPOSITORY_URI}'
-                        sh 'docker tag ${AWS_ECR_REPO_NAME} ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}'
-                        sh 'docker push ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}'
-                }
-            }
-        }
-        stage("TRIVY Image Scan") {
+        
+      stage("TRIVY Image Scan") {
             steps {
                 sh 'trivy image ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER} > trivyimage.txt' 
             }
         }
-        stage('Checkout Code') {
+        
+        
+        stage('ECR Image Pushing') {
             steps {
-                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/devsec-app-eks-argocd.git'
-            }
-        }
-        stage('Update Deployment file') {
-            environment {
-                GIT_REPO_NAME = "devsec-app-eks-argocd"
-                GIT_USER_NAME = "fred4impact"
-            }
-            steps {
-                dir('K8s-manifests/Frontend') {
-                    withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-key',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    script {
                         sh '''
-                            git config user.email "runtesting4me@gmail.com"
-                            git config user.name "fred4impact"
-                            BUILD_NUMBER=${BUILD_NUMBER}
-                            echo $BUILD_NUMBER
-                            imageTag=$(grep -oP '(?<=frontend:)[^ ]+' deployment.yaml)
-                            echo $imageTag
-                            sed -i "s/${AWS_ECR_REPO_NAME}:${imageTag}/${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}/" deployment.yaml
-                            git add deployment.yaml
-                            git commit -m "Update deployment Image to version \${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                            aws configure set default.region ${AWS_DEFAULT_REGION}
+                       
+                            aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${REPOSITORY_URI}
+                            docker tag ${AWS_ECR_REPO_NAME} ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}
+                            docker push ${REPOSITORY_URI}${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}
                         '''
                     }
                 }
             }
         }
+
+        
+   
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', credentialsId: 'GITHUB', url: 'https://github.com/fred4impact/devsec-app-eks-argocd.git'
+            }
+        }
+  stage('Update Deployment file') {
+            environment {
+                IMAGE_TAG     = "${BUILD_NUMBER}"
+                GIT_REPO_NAME = "devsec-app-eks-argocd"
+                GIT_USER_NAME = "fred4impact"
+            }
+            steps {
+                dir('k8s-manifests/Frontend') {
+                    withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                        script {
+                            def repoUrl = "https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git"
+                            def deploymentFile = "deployment.yaml"
+                            
+                            sh """
+                                git config user.email "runtesting4me@gmail.com"
+                                git config user.name "fred4impact"
+                                
+                                echo "[INFO] Updating image tag to ${BUILD_NUMBER} on line 28"
+                                
+                                # Replace tag only on line 28
+                                sed -i '28s/\\(:frontend:\\)\\S\\+/\\1${BUILD_NUMBER}/' ${deploymentFile}
+        
+                                git add ${deploymentFile}
+                                git commit -m "Update frontend image to tag ${BUILD_NUMBER}" || echo "[INFO] No changes to commit."
+                                git remote set-url origin ${repoUrl}
+                                git push origin main
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+       
     }
 }
