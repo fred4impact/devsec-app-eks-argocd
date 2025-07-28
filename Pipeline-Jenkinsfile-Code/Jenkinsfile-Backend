@@ -111,34 +111,36 @@ pipeline {
         }
 
   stage('Update Deployment file') {
-    environment {
-        IMAGE_TAG     = "${BUILD_NUMBER}"
-        GIT_REPO_NAME = "devsec-app-eks-argocd"
-        GIT_USER_NAME = "fred4impact"
-    }
-    steps {
-        dir('k8s-manifests/Backend') {
-            withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                script {
-                    def repoUrl = "https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git"
-                    sh """
-                        git config user.email "runtesting4me@gmail.com"
-                        git config user.name "fred4impact"
+            environment {
+                IMAGE_TAG     = "${BUILD_NUMBER}"
+                GIT_REPO_NAME = "devsec-app-eks-argocd"
+                GIT_USER_NAME = "fred4impact"
+            }
+            steps {
+                dir('k8s-manifests/Backend') {
+                    withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                        script {
+                            def repoUrl = "https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git"
+                            sh """
+                                git config user.email "runtesting4me@gmail.com"
+                                git config user.name "fred4impact"
 
-                        echo "[INFO] Updating image tag on line 28 only..."
-                        sed -i "28s|\\(image: [^:]*:\\)[^ ]*|\\1${BUILD_NUMBER}|" deployment.yaml
+                                echo "[INFO] Reading existing image tag..."
+                                oldTag=\$(grep -oP '(?<=${AWS_ECR_REPO_NAME}:)[^\\s\"]+' deployment.yaml || echo "latest")
+                                echo "[INFO] Current image tag: \$oldTag"
 
-                        git add deployment.yaml
-                        git commit -m "Update backend image to tag ${BUILD_NUMBER}" || echo "[INFO] No changes to commit."
+                                echo "[INFO] Updating to new tag: ${BUILD_NUMBER}"
+                                sed -i "s|${AWS_ECR_REPO_NAME}:\$oldTag|${AWS_ECR_REPO_NAME}:${BUILD_NUMBER}|" deployment.yaml
 
-                        git remote set-url origin ${repoUrl}
-                        git push origin main
-                    """
+                                git add deployment.yaml
+                                git commit -m "Update backend image to tag ${BUILD_NUMBER}" || echo "[INFO] No changes to commit."
+                                git push ${repoUrl} HEAD:main
+                            """
+                        }
+                    }
                 }
             }
         }
-    }
-}
 
 
     }
